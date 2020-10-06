@@ -3,6 +3,10 @@ import sys
 import urllib.request
 import re
 import typing
+import asyncio
+
+import aiohttp
+
 
 BASE_URL = "https://chmura.put.poznan.pl/s/G285gnQVuCnfQAx/download?path=%2F"
 
@@ -69,7 +73,7 @@ def download_progress(blocknum, blocksize, totalsize):
         sys.stderr.write("read %d\n" % (readsofar,))
 
 
-def download(
+async def download(
     experiment_types: typing.List[str],
     media_types: typing.List[str],
     data_ids: typing.List[str] = None,
@@ -143,42 +147,55 @@ def download(
     if "video-576p" in media_types:
         os.makedirs(VIDEO_576p_DIR, exist_ok=True)
 
-    for r in records:
-        if r[0] in experiment_types:
-            if r[1] in ids:
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for r in records:
+            if r[0] in experiment_types and r[1] in ids:
                 record = "{:s}-{:s}-{:s}-{:s}-{:s}".format(r[0], r[1], r[2], r[3], r[4])
                 if "data-csv" in media_types:
-                    print(DATA_CSV_DIR + "/" + record + ".zip")
-                    urllib.request.urlretrieve(
-                        BASE_URL + DATA_CSV_DIR + "&files=" + record + ".zip",
-                        DATA_CSV_DIR + "/" + record + ".zip",
-                        download_progress,
+                    tasks.append(
+                        asyncio.create_task(
+                            fetch_data(session, BASE_URL, DATA_CSV_DIR, record, "zip")
+                        )
                     )
                 if "data-hdf5" in media_types:
-                    print(DATA_HDF5_DIR + "/" + record + ".hdf5")
-                    urllib.request.urlretrieve(
-                        BASE_URL + DATA_HDF5_DIR + "&files=" + record + ".hdf5",
-                        DATA_HDF5_DIR + "/" + record + ".hdf5",
-                        download_progress,
+                    tasks.append(
+                        asyncio.create_task(
+                            fetch_data(session, BASE_URL, DATA_HDF5_DIR, record, "hdf5")
+                        )
                     )
                 if "depth" in media_types and r[0] != "emg_force":
-                    print(DEPTH_DIR + "/" + record + ".zip")
-                    urllib.request.urlretrieve(
-                        BASE_URL + DEPTH_DIR + "&files=" + record + ".zip",
-                        DEPTH_DIR + "/" + record + ".zip",
-                        download_progress,
+                    tasks.append(
+                        asyncio.create_task(
+                            fetch_data(session, BASE_URL, DEPTH_DIR, record, "zip")
+                        )
                     )
                 if "video-1080p" in media_types:
-                    print(VIDEO_1080p_DIR + "/" + record + ".mp4")
-                    urllib.request.urlretrieve(
-                        BASE_URL + VIDEO_1080p_DIR + "&files=" + record + ".mp4",
-                        VIDEO_1080p_DIR + "/" + record + ".mp4",
-                        download_progress,
+                    tasks.append(
+                        asyncio.create_task(
+                            fetch_data(
+                                session, BASE_URL, VIDEO_1080p_DIR, record, "mp4"
+                            )
+                        )
                     )
                 if "video-576p" in media_types:
-                    print(VIDEO_576p_DIR + "/" + record + ".mp4")
-                    urllib.request.urlretrieve(
-                        BASE_URL + VIDEO_576p_DIR + "&files=" + record + ".mp4",
-                        VIDEO_576p_DIR + "/" + record + ".mp4",
-                        download_progress,
+                    tasks.append(
+                        asyncio.create_task(
+                            fetch_data(session, BASE_URL, VIDEO_576p_DIR, record, "mp4")
+                        )
                     )
+
+        await asyncio.gather(*tasks)
+
+
+async def fetch_data(session, base_url, data_dir, record, file_type):
+    url = base_url + data_dir + "&files=" + record + f".{file_type}"
+    file_path = data_dir + "/" + record + f".{file_type}"
+
+    print(f"Fetching {file_path}")
+
+    async with session.get(url) as response:
+        data = await response.read()
+        print(f"Storing {file_path}")
+        with open(file_path, "wb") as file:
+            file.write(data)

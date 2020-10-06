@@ -8,6 +8,7 @@ authors = ["Kane Rodriguez <kanerodriguezpro@gmail.com>"]
 python = "^3.8"
 jupyter = "^1.0.0"
 pre-commit = "^2.7.1"
+aiohttp = "^3.6.2"
 
 [tool.poetry.dev-dependencies]
 

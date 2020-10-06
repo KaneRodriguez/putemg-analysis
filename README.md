@@ -20,11 +20,11 @@ poetry install
 To run the jupyter notebook locally, run the following commands:
 
 1. Enter a poetry shell
-```bash
-poetry shell
-```
+    ```bash
+    poetry shell
+    ```
 2. Start jupyter
-```shell
-jupyter notebook
-```
+    ```shell
+    jupyter notebook
+    ```
 3. Navigate to and open the `data-analysis.ipynb` notebook

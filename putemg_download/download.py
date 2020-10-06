@@ -188,9 +188,15 @@ async def download(
         await asyncio.gather(*tasks)
 
 
-async def fetch_data(session, base_url, data_dir, record, file_type):
+async def fetch_data(
+    session, base_url, data_dir, record, file_type, overwrite_existing: bool = False
+) -> None:
     url = base_url + data_dir + "&files=" + record + f".{file_type}"
     file_path = data_dir + "/" + record + f".{file_type}"
+
+    if not overwrite_existing:
+        if os.path.isfile(file_path):
+            return
 
     print(f"Fetching {file_path}")
 

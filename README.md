@@ -15,6 +15,18 @@ Install the project dependencies:
 poetry install
 ```
 
+### Install Precommit
+
+Enter a poetry shell:
+```bash
+poetry shell
+```
+
+Install [pre-commit](https://pre-commit.com/) hooks:
+```bash
+pre-commit install
+```
+
 ### Local Development
 
 To run the jupyter notebook locally, run the following commands:

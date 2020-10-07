@@ -5,6 +5,7 @@ import re
 import typing
 import asyncio
 
+import pandas as pd
 import aiohttp
 
 
@@ -205,3 +206,80 @@ async def fetch_data(
         print(f"Storing {file_path}")
         with open(file_path, "wb") as file:
             file.write(data)
+
+
+def create_dataframe_from_records_meta(
+    records_meta: typing.List[typing.Tuple[str, str, str, str, str]]
+) -> pd.DataFrame:
+    df = pd.DataFrame(
+        records_meta, columns=["type", "id", "trajectory", "date", "time"]
+    )
+    return df
+
+
+def get_records_dataframe(
+    experiment_types: typing.List[str],
+    media_types: typing.List[str],
+    data_ids: typing.List[str] = None,
+) -> pd.DataFrame:
+    data_ids = data_ids or []
+    records_meta = []
+
+    if not experiment_types or not media_types:
+        usage()
+        return create_dataframe_from_records_meta(records_meta)
+
+    for e in experiment_types:
+        if not e in ("emg_gestures", "emg_force"):
+            print('Invalid experiment type "{:s}"'.format(e))
+            usage()
+            return create_dataframe_from_records_meta(records_meta)
+
+    experiment_types = set(experiment_types)
+
+    for m in media_types:
+        if not any(
+            m in t
+            for t in ("data-csv", "data-hdf5", "depth", "video-1080p", "video-576p")
+        ):
+            print('Invalid media type "{:s}"'.format(m))
+            usage()
+            return create_dataframe_from_records_meta(records_meta)
+
+    media_types = set(media_types)
+
+    records_available = (
+        urllib.request.urlopen(BASE_URL + "&files=records.txt")
+        .read()
+        .decode("utf-8")
+        .splitlines()
+    )
+
+    records = list()
+    ids = set()
+    for r in records_available:
+        experiment_type, id, trajectory, date, time = parse_record(r)
+        records.append((experiment_type, id, trajectory, date, time))
+        ids.add(id)
+
+    ids_requested = set()
+    if data_ids:
+        for id in data_ids:
+            if not re.match(r"^[0-9]{2}$", id):
+                print('Invalid id "{:s}"'.format(id))
+                usage()
+                return records_meta
+            if not id in ids:
+                print('ID "{:s}" not available'.format(id))
+                return records_meta
+            ids_requested.add(id)
+        ids = ids.intersection(ids_requested)
+
+    ids = list(ids)
+    ids.sort()
+
+    for r in records:
+        if r[0] in experiment_types and r[1] in ids:
+            records_meta.append(r)
+
+    return create_dataframe_from_records_meta(records_meta)

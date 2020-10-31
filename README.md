@@ -1,5 +1,9 @@
 # putemg-analysis
 
+This project has a notebook that helps with the download and analysis of the [PutEMG dataset](https://biolab.put.poznan.pl/putemg-dataset/). 
+
+The download module extends work from the [putemg-downloader](https://github.com/biolab-put/putemg-downloader) project.
+
 ### Install Dependencies
 
 Install the [poetry](https://github.com/python-poetry/poetry) package manager with:
